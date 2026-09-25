@@ -22,6 +22,11 @@ public class Scanner {
         palavrasReservadas.put("true", TokenType.TRUE);
         palavrasReservadas.put("false", TokenType.FALSE);
         palavrasReservadas.put("return", TokenType.RETURN);
+        palavrasReservadas.put("int", TokenType.INT);
+        palavrasReservadas.put("double", TokenType.DOUBLE);
+        palavrasReservadas.put("char", TokenType.CHAR);
+        palavrasReservadas.put("bool", TokenType.BOOL);
+        palavrasReservadas.put("string", TokenType.TIPO_STRING);
     }
 
     public Scanner(String source) {
