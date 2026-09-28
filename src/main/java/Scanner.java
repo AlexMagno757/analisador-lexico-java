@@ -27,6 +27,7 @@ public class Scanner {
         palavrasReservadas.put("char", TokenType.CHAR);
         palavrasReservadas.put("bool", TokenType.BOOL);
         palavrasReservadas.put("string", TokenType.TIPO_STRING);
+        palavrasReservadas.put("fun", TokenType.FUNCAO);
     }
 
     public Scanner(String source) {
@@ -74,13 +75,42 @@ public class Scanner {
                     break;
 
                 case '#':
-                    while (hasNext() && peek() != '\n') advance();
+                    int linhaInicio = line;
+                    int colInicio = col;
+
+                    advance();
+
+                    if(peek() == '!'){
+                        advance();
+                        boolean fechado = false;
+
+                        while(hasNext()){
+                            if(peek() =='!'){
+                                advance();
+                                if(peek() =='#'){
+                                    advance();
+                                    fechado = true;
+                                    break;
+                                }
+                            } else {
+                                advance();
+                            }
+                        }
+
+                        if (!fechado) {
+                            throw new LexicalException("Erro Léxico: Comentário em bloco iniciado na linha " + linhaInicio + " coluna " + colInicio + " nunca foi fechado.");
+                        }
+
+                    }else {
+                        while (hasNext() && peek() != '\n') {
+                            advance();
+                        }
+                    }
                     break;
 
                 default:
                     return;
             }
-
         }
     }
 
@@ -122,7 +152,7 @@ public class Scanner {
                     if(isLetter(c)){
                         advance();
                         state= State.S1;
-                    }//else throw new LexicalException("Erro léxico: Esperava-se uma letra na linha " + line + " coluna " + col);
+                    }
                     break;
 
                 case S1:
