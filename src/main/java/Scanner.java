@@ -98,7 +98,7 @@ public class Scanner {
                         }
 
                         if (!fechado) {
-                            throw new LexicalException("Erro Léxico: Comentário em bloco iniciado na linha " + linhaInicio + " coluna " + colInicio + " nunca foi fechado.");
+                            System.err.println("Erro Léxico: Comentário em bloco iniciado na linha " + linhaInicio + " coluna " + colInicio + " nunca foi fechado.");
                         }
 
                     }else {
@@ -184,7 +184,10 @@ public class Scanner {
 
                 case S1:
                     if (!hasNext() || c == '\n'){
-                        throw new LexicalException("Erro léxico: String iniciada na linha " + line + " (coluna " + colunaInicial + ") não foi fechada.");
+                        System.err.println("Erro léxico: String iniciada na linha " + line + " (coluna " + colunaInicial + ") não foi fechada.");
+                        if (c == '\n') advance();
+                        return scanToken();
+
                     } else if (c=='\\') {
                         advance();
                         advance();
@@ -194,11 +197,13 @@ public class Scanner {
 
                     }else {
                         advance();
-                        String lexeme = source.substring(start,current);
-                        return new Token(TokenType.STRING,lexeme,line,colunaInicial);
+                        state = State.S2;
                     }
                     break;
 
+                case S2:
+                    String lexeme = source.substring(start,current);
+                    return new Token(TokenType.STRING,lexeme,line,colunaInicial);
             }
         }
     }
@@ -225,7 +230,7 @@ public class Scanner {
                         advance();
                     }else{
                         if(isLetter(c)){
-                            throw new LexicalException("Erro léxico: Número mal formatado com a letra '" + c + "' na linha " + line + " coluna " + col);
+                            System.err.println("Erro léxico: Número mal formatado com a letra '" + c + "' na linha " + line + " coluna " + col);
                         }
                         String lexeme = source.substring(start,current);
                         return new Token(TokenType.NUMERO, lexeme, line, col);
@@ -238,7 +243,8 @@ public class Scanner {
                         state =State.S3;
                     }
                     else{
-                        throw new LexicalException("Esperava dígito na linha " + line + " coluna " + col );
+                        System.err.println("Erro léxico: Esperava dígito após ponto decimal na linha " + line + " coluna " + col );
+                        return scanToken();
                     }
                     break;
 
@@ -248,7 +254,7 @@ public class Scanner {
                         advance();
                     }else{
                         if (isLetter(c)) {
-                            throw new LexicalException("Erro léxico: Número mal formatado com a letra '" + c + "' na linha " + line + " coluna " + col);
+                            System.err.println("Erro léxico: Número mal formatado com a letra '" + c + "' na linha " + line + " coluna " + col);
                         }
                         String lexeme = source.substring(start,current);
                         return new Token(TokenType.NUMERO, lexeme, line, col);
@@ -275,7 +281,8 @@ public class Scanner {
             case "&": return  TokenType.AND;
             case "|": return TokenType.OR;
             default:
-                throw new LexicalException("Operador desconhecido: " + lexeme);
+                System.err.println("Erro Léxico: Operador desconhecido: '" + lexeme + "' na linha " + line + " coluna " + col);
+                return null;
         }
     }
 
@@ -290,23 +297,31 @@ public class Scanner {
                 case S0:
                     if(c== '+'|| c=='-'|| c=='*' || c=='/' || c=='&' || c=='|'){
                         advance();
-                        String lexeme = source.substring(start,current);
-                        return new Token(determineTypeOp(lexeme), lexeme, line, col);
+                        state= State.S2;
+
                     } else if (c== '=' || c== '!' || c=='<' || c=='>'){
-                        state = State.S1;
                         advance();
+                        state = State.S1;
+
                     }
                     break;
 
                 case S1:
                     if(c == '='){
                         advance();
-                        String lexeme = source.substring(start,current);
-                        return new Token(determineTypeOp(lexeme), lexeme, line, col);
+                        state = State.S2;
+
                     }else {
-                        String lexeme = source.substring(start, current);
-                        return new Token(determineTypeOp(lexeme), lexeme, line, col);
+                        state=State.S2;
                     }
+                    break;
+
+                case S2:
+                    String lexeme = source.substring(start, current);
+                    TokenType tipoOp = determineTypeOp(lexeme);
+                    if (tipoOp == null) return scanToken();
+
+                    return new Token(tipoOp, lexeme, line, col);
 
             }
         }
@@ -325,7 +340,8 @@ public class Scanner {
             case ';': return new Token(TokenType.PONTOVIRGULA, lexeme, line, col);
             case ',': return new Token(TokenType.VIRGULA, lexeme, line, col);
             default:
-                throw new LexicalException("Símbolo de pontuação desconhecido: " + c + " na linha " + line + " coluna " + col);
+                System.err.println("Erro Léxico: Símbolo de pontuação desconhecido: '" + c + "' na linha " + line + " coluna " + col);
+                return scanToken();
         }
     }
 
@@ -354,7 +370,9 @@ public class Scanner {
             return scanSimbols();
         }
 
-        throw new LexicalException("\nErro Léxico: \nCaractere inesperado: (" + c + ") na linha "+ line+ " coluna " +col);
+        System.err.println("Erro Léxico: Caractere inesperado '" + c + "' na linha " + line + " coluna " + col);
+        advance();
+        return scanToken();
     }
 
     public List<Token> scanAllTokens() {
