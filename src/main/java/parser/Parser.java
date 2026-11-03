@@ -1,9 +1,14 @@
 package parser;
 
-import lexer.Scanner;
-import lexer.Token;
-import lexer.TokenType;
+import ast.Program;
+import ast.cmd.*;
+import ast.decl.*;
+import ast.expr.*;
+import lexer.*;
 
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.EnumSet;
 
@@ -16,11 +21,11 @@ public class Parser {
 
     private ParseError error(String message) {
         hadError = true;
-        System.err.println("Erro Sintático na linha " + lookahead.line + ", coluna " + lookahead.col + ": " + message);
+        System.out.println("Erro Sintático na linha " + lookahead.line + ", coluna " + lookahead.col + ": " + message);
         return new ParseError();
     }
 
-    Parser(Scanner scanner) {
+    public Parser(Scanner scanner) {
         this.scanner = scanner;
         this.lookahead = scanner.scanToken();
     }
@@ -32,17 +37,22 @@ public class Parser {
     }
 
 
-    public void parse(){
+    public Program parse(){
         try {
-            parsePrograma();
+            Program raiz = parsePrograma();
 
             if(!hadError){
-                System.out.println("Análise Sintática: Código Aceito com Sucesso!");
+                //System.out.println("Análise Sintática: Código Aceito com Sucesso!");
+                return raiz;
             }
-            else System.out.println("Análise Sintática concluída, mas o código contém erros listados acima.");
+            else {
+                System.out.println("Análise Sintática concluída, mas o código contém erros listados acima.");
+                return null;
+            }
 
         }catch (ParseError e){
             System.out.println("Análise interrompida precocemente devido a erros críticos.");
+            return null;
         }
     }
 
@@ -69,102 +79,148 @@ public class Parser {
                 lookahead.type == TokenType.TIPO_STRING;
     }
 
-    private void parsePrograma(){
-        parseListaDecl();
+    private Program parsePrograma(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
+        List< Decl> declaracoes = parseListaDecl();
         match(TokenType.EOF);
+        return new Program(declaracoes, linha, coluna);
     }
 
-    private void parseListaDecl(){
-        try {
-            if (lookahead.type == TokenType.FUNCAO || checkTipo()) {
-                parseDeclaracao();
-                parseListaDecl();
-            } else if (lookahead.type == TokenType.EOF) {
-                return;
-            } else {
-                throw error("Esperado uma declaração ('fun' ou tipo de variável), mas encontrado '" + lookahead.lexeme + "'.");
+    private List<Decl> parseListaDecl(){
+        List<Decl> lista = new ArrayList<>();
+        while (lookahead.type != TokenType.EOF) {
+            try {
+                if (lookahead.type == TokenType.FUNCAO || checkTipo()) {
+                    Decl declaracao = parseDeclaracao();
+                    if (declaracao != null) {
+                        lista.add(declaracao);
+                    }
+                } else {
+                    throw error("Esperado uma declaração ('fun' ou tipo de variável), mas encontrado '" + lookahead.lexeme + "'.");
+                }
+            } catch (ParseError e) {
+                Set<TokenType> sync = EnumSet.of(
+                        TokenType.FUNCAO, TokenType.INT, TokenType.DOUBLE,
+                        TokenType.CHAR, TokenType.BOOL, TokenType.TIPO_STRING, TokenType.EOF
+                );
+                sincronizar(sync);
             }
-        } catch (ParseError e) {
-            Set<TokenType> sync = EnumSet.of(
-                    TokenType.FUNCAO, TokenType.INT, TokenType.DOUBLE,
-                    TokenType.CHAR, TokenType.BOOL, TokenType.TIPO_STRING, TokenType.EOF
-            );
-            sincronizar(sync);
-            parseListaDecl();
         }
+        return lista;
     }
 
-    private void parseDeclaracao(){
+    private Decl parseDeclaracao(){
 
         if(lookahead.type == TokenType.FUNCAO){
-            parseDeclaracaoFuncao();
+            return parseDeclaracaoFuncao();
         } else if (checkTipo()) {
-            parseDeclaracaoVariavel();
+            return parseDeclaracaoVariavel();
         }else{
             throw error("Declaração inválida.");
         }
     }
 
-    private void parseTipo(){
+    private String parseTipo(){
         if(checkTipo()){
+            String tipo = lookahead.lexeme;
             match(lookahead.type);
-        }else throw error("Tipo de dado esperado.");
+            return tipo;
+        }else{
+            throw error("Tipo de dado esperado.");
+        }
     }
 
-    private void parseDeclaracaoFuncao(){
-       match(TokenType.FUNCAO);
-       match(TokenType.IDENTIFICADOR);
-       match(TokenType.ABREPAR);
-       parseListaParams();
-       match(TokenType.FECHAPAR);
-       parseBloco();
-    }
+    private FunDecl parseDeclaracaoFuncao(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
 
-    private void parseDeclaracaoVariavel(){
-        parseTipo();
+        match(TokenType.FUNCAO);
+        String id = lookahead.lexeme;
         match(TokenType.IDENTIFICADOR);
-        match(TokenType.ATRIBUICAO);
-        parseExpressao();
+        match(TokenType.ABREPAR);
+        List<Param> params = parseListaParams();
+        match(TokenType.FECHAPAR);
+        BlockCmd body = parseBloco();
+
+        return new FunDecl(id,params,body, linha, coluna);
+    }
+    private VarDecl parseDeclaracaoVariavel(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
+        String tipo = parseTipo();
+        String id = lookahead.lexeme;
+        match(TokenType.IDENTIFICADOR);
+
+        Expr expr = null;
+        if(lookahead.type == TokenType.ATRIBUICAO) {
+            match(TokenType.ATRIBUICAO);
+            expr = parseExpressao();
+        }
         match(TokenType.PONTOVIRGULA);
+        return new VarDecl(tipo, id , expr, linha,coluna);
     }
 
-    private void parseListaParams(){
+    private List<Param> parseListaParams(){
+        List<Param> params = new ArrayList<>();
+
         if(checkTipo()){
-            parseParametro();
-            parseListaParamsContinua();
-        }else if(lookahead.type == TokenType.FECHAPAR){
-            return;
+            params.add(parseParametro());
+            parseListaParamsContinua(params);
+
+        }else if(lookahead.type == TokenType.FECHAPAR) {
+            return params;
+
         }else throw error("Parâmetro inválido.");
 
+        return params;
     }
 
-    private void parseListaParamsContinua(){
+    private void parseListaParamsContinua(List<Param> params){
         if(lookahead.type == TokenType.VIRGULA){
             match(TokenType.VIRGULA);
-            parseParametro();
-            parseListaParamsContinua();
+            params.add(parseParametro());
+            parseListaParamsContinua(params);
 
         } else if (lookahead.type == TokenType.FECHAPAR) {
             return;
         }else throw error("Esperado: ',' ou ')'.");
     }
 
-    private void parseParametro(){
-        parseTipo();
+    private Param parseParametro(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
+        String tipo = parseTipo();
+        String id = lookahead.lexeme;
         match(TokenType.IDENTIFICADOR);
+
+        return  new Param(tipo,id, linha, coluna);
     }
 
-    private void parseBloco(){
+    private BlockCmd parseBloco(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.ABRECHAVE);
-        parseListaCmd();
+
+        List<Cmd> cmds = new ArrayList<>();
+        parseListaCmd(cmds);
         match(TokenType.FECHACHAVE);
+
+        return new BlockCmd(cmds,linha, coluna);
     }
 
-    private void parseListaCmd(){
+    private void parseListaCmd(List<Cmd> cmds){
         try {
             if (isInicioCmd()) {
-                parseComando();
-                parseListaCmd();
+                Cmd  comando = parseComando();
+                if(comando != null) cmds.add(comando);
+
+                parseListaCmd(cmds);
+
             } else if (lookahead.type == TokenType.FECHACHAVE) {
                 return;
             } else {
@@ -173,96 +229,137 @@ public class Parser {
         } catch (ParseError e) {
             Set<TokenType> sync = EnumSet.of(
                     TokenType.IF, TokenType.WHILE, TokenType.FOR, TokenType.RETURN,
-                    TokenType.PRINT, TokenType.IDENTIFICADOR, TokenType.INT,
-                    TokenType.DOUBLE, TokenType.CHAR, TokenType.BOOL,
-                    TokenType.TIPO_STRING, TokenType.PONTOVIRGULA,
-                    TokenType.FECHACHAVE, TokenType.EOF
+                    TokenType.PRINT, TokenType.PONTOVIRGULA, TokenType.FECHACHAVE, TokenType.EOF
             );
             sincronizar(sync);
             if (lookahead.type == TokenType.PONTOVIRGULA) {
                 lookahead = scanner.scanToken();
             }
-            parseListaCmd();
+
+            if (lookahead.type == TokenType.EOF) {
+                return;
+            }
+            parseListaCmd(cmds);
         }
     }
 
-    private void parseComando(){
+    private Cmd parseComando(){
         TokenType t = lookahead.type;
-        if (t == TokenType.IF) parseComandoIf();
-        else if (t == TokenType.WHILE) parseComandoWhile();
-        else if (t == TokenType.FOR) parseComandoFor();
-        else if (t == TokenType.RETURN) parseComandoReturn();
-        else if (t == TokenType.PRINT) parseComandoPrint();
-        else if (t == TokenType.IDENTIFICADOR) parseComandoAtribuicao();
-        else if (checkTipo()) parseDeclaracaoVariavel();
+        if (t == TokenType.IF) return parseComandoIf();
+        else if (t == TokenType.WHILE) return parseComandoWhile();
+        else if (t == TokenType.FOR) return parseComandoFor();
+        else if (t == TokenType.RETURN) return parseComandoReturn();
+        else if (t == TokenType.PRINT) return parseComandoPrint();
+        else if (t == TokenType.IDENTIFICADOR) return parseComandoAtribuicao();
+        else if (checkTipo()) {
+            VarDecl declaracao = parseDeclaracaoVariavel();
+            return new VarDeclCmd(declaracao);
+        }
         else {
             throw error("Comando não reconhecido.");
         }
     }
 
-    private void parseComandoIf(){
+    private IfCmd parseComandoIf(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.IF);
         match(TokenType.ABREPAR);
-        parseExpressao();
+        Expr condition = parseExpressao();
         match(TokenType.FECHAPAR);
-        parseBloco();
-        parseComandoIfContinua();
+        BlockCmd thenBlock = parseBloco();
+        BlockCmd elseBlock = parseComandoIfContinua();
+
+        return new IfCmd(condition, thenBlock, elseBlock, linha, coluna);
     }
 
-    private void parseComandoIfContinua(){
+    private BlockCmd parseComandoIfContinua(){
         if(lookahead.type == TokenType.ELSE){
             match(TokenType.ELSE);
-            parseBloco();
+            return parseBloco();
         } else if (isInicioCmd() || lookahead.type == TokenType.FECHACHAVE) {
-            return;
+            return null;
         }else throw error("Esperado: 'else' ou continuação do código.");
     }
 
-    private void parseComandoWhile(){
+    private WhileCmd parseComandoWhile(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.WHILE);
         match(TokenType.ABREPAR);
-        parseExpressao();
+        Expr condition = parseExpressao();
         match(TokenType.FECHAPAR);
-        parseBloco();
+        BlockCmd body = parseBloco();
+
+        return new WhileCmd(condition, body, linha, coluna);
     }
 
-    private void parseComandoFor(){
+    private ForCmd parseComandoFor(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.FOR);
         match(TokenType.ABREPAR);
-        parseAtribuicaoFor();
+        AtribCmd init = parseAtribuicaoFor();
         match(TokenType.PONTOVIRGULA);
-        parseExpressao();
+        Expr condition = parseExpressao();
         match(TokenType.PONTOVIRGULA);
-        parseAtribuicaoFor();
+        AtribCmd update = parseAtribuicaoFor();
         match(TokenType.FECHAPAR);
-        parseBloco();
+        BlockCmd body = parseBloco();
+
+        return new ForCmd(init, condition, update, body, linha, coluna);
     }
 
-    private void parseAtribuicaoFor(){
+    private AtribCmd parseAtribuicaoFor(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
+        String id = lookahead.lexeme;
         match(TokenType.IDENTIFICADOR);
         match(TokenType.ATRIBUICAO);
-        parseExpressao();
+        Expr expr = parseExpressao();
+
+        return new AtribCmd(id, expr, linha, coluna);
     }
 
-    private void parseComandoReturn(){
+    private ReturnCmd parseComandoReturn(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.RETURN);
-        parseExpressao();
+        Expr expr = parseExpressao();
         match(TokenType.PONTOVIRGULA);
+
+        return new ReturnCmd(expr, linha, coluna);
     }
 
-    private void parseComandoPrint(){
+    private PrintCmd parseComandoPrint(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
         match(TokenType.PRINT);
         match(TokenType.ABREPAR);
-        parseExpressao();
+        Expr expr = parseExpressao();
         match(TokenType.FECHAPAR);
         match(TokenType.PONTOVIRGULA);
+
+        return new PrintCmd(expr, linha, coluna);
     }
 
-    private void parseComandoAtribuicao(){
+    private AtribCmd parseComandoAtribuicao(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
+
+        String id = lookahead.lexeme;
         match(TokenType.IDENTIFICADOR);
         match(TokenType.ATRIBUICAO);
-        parseExpressao();
+        Expr expr = parseExpressao();
         match(TokenType.PONTOVIRGULA);
+
+        return new AtribCmd(id, expr, linha, coluna);
     }
 
     private boolean isFollowExpOr() {
@@ -290,122 +387,160 @@ public class Parser {
         return t == TokenType.SOMA || t == TokenType.SUBTRACAO || isFollowExpAritmetica();
     }
 
-    private void parseExpressao(){
-        parseExpOr();
+    private Expr parseExpressao(){
+        return parseExpOr();
     }
 
-    private void parseExpOr(){
-        parseExpAnd();
-        parseExpOrContinua();
+    private Expr parseExpOr(){
+        Expr left = parseExpAnd();
+        return parseExpOrContinua(left);
     }
 
-    private void parseExpOrContinua(){
+    private Expr parseExpOrContinua(Expr left){
         if(lookahead.type == TokenType.OR){
+            String op = lookahead.lexeme;
             match(TokenType.OR);
-            parseExpAnd();
-            parseExpOrContinua();
+            Expr right = parseExpAnd();
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseExpOrContinua(novaEsquerda);
+
         } else if (isFollowExpOr()) {
-            return;
+            return left;
         }else throw error("Expressão malformada: Esperado operador ou fim de instrução.");
     }
 
-    private void parseExpAnd(){
-        parseExpIgualdade();
-        parseExpAndContinua();
+    private Expr parseExpAnd(){
+        Expr left = parseExpIgualdade();
+        return parseExpAndContinua(left);
     }
 
-    private void parseExpAndContinua(){
+    private Expr parseExpAndContinua(Expr left){
         if(lookahead.type == TokenType.AND){
+            String op = lookahead.lexeme;
             match(TokenType.AND);
-            parseExpIgualdade();
-            parseExpAndContinua();
+            Expr right = parseExpIgualdade();
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseExpAndContinua(novaEsquerda);
+
         } else if (isFollowExpAnd()) {
-            return;
+            return left;
         }else throw error("Expressão malformada no AND.");
     }
 
-    private void parseExpIgualdade(){
-        parseExpRelacional();
-        parseExpIgualdadeContinua();
+    private Expr parseExpIgualdade(){
+        Expr left = parseExpRelacional();
+        return parseExpIgualdadeContinua(left);
     }
 
-    private void parseExpIgualdadeContinua(){
+    private Expr parseExpIgualdadeContinua(Expr left){
         TokenType t = lookahead.type;
 
         if(t == TokenType.IGUALDADE || t == TokenType.DIFERENTE){
+            String op = lookahead.lexeme;
             match(t);
-            parseExpRelacional();
-            parseExpIgualdadeContinua();
+            Expr right = parseExpRelacional();
+
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseExpIgualdadeContinua(novaEsquerda);
+
         } else if (isFollowExpIgualdade()) {
-            return;
+            return left;
         }else throw error("Expressão malformada na Igualdade.");
     }
 
-    private void parseExpRelacional(){
-        parseExpAritmetica();
-        parseExpRelacionalContinua();
+    private Expr parseExpRelacional(){
+        Expr left = parseExpAritmetica();
+        return parseExpRelacionalContinua(left);
     }
 
-    private void parseExpRelacionalContinua(){
+    private Expr parseExpRelacionalContinua(Expr left){
         TokenType t = lookahead.type;
 
         if (t == TokenType.MAIOR || t == TokenType.MAIORIGUAL || t == TokenType.MENOR || t == TokenType.MENORIGUAL){
+            String op = lookahead.lexeme;
             match(t);
-            parseExpAritmetica();
-            parseExpRelacionalContinua();
+            Expr right = parseExpAritmetica();
+
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseExpRelacionalContinua(novaEsquerda);
         } else if (isFollowExpRelacional()) {
-            return;
+            return left;
         }else throw error("Expressão malformada no Relacional.");
     }
 
-    private void parseExpAritmetica(){
-        parseTermo();
-        parseExpAritmeticaContinua();
+    private Expr parseExpAritmetica(){
+        Expr left = parseTermo();
+        return parseExpAritmeticaContinua(left);
     }
 
-    private void parseExpAritmeticaContinua(){
+    private Expr parseExpAritmeticaContinua(Expr left){
         TokenType t = lookahead.type;
         if (t == TokenType.SOMA || t == TokenType.SUBTRACAO) {
+            String op = lookahead.lexeme;
             match(t);
-            parseTermo();
-            parseExpAritmeticaContinua();
+            Expr right = parseTermo();
+
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseExpAritmeticaContinua(novaEsquerda);
         } else if (isFollowExpAritmetica()) {
-            return;
+            return left;
         }else throw error("Operador inválido em Expressão Aritmética.");
     }
 
-    private void parseTermo(){
-        parseFator();
-        parseTermoContinua();
+    private Expr parseTermo(){
+        Expr left = parseFator();
+        return parseTermoContinua(left);
     }
 
-    private void parseTermoContinua(){
+    private Expr parseTermoContinua(Expr left){
         TokenType t = lookahead.type;
         if (t == TokenType.MULTIPLICACAO || t == TokenType.DIVISAO) {
+            String op = lookahead.lexeme;
             match(t);
-            parseFator();
-            parseTermoContinua();
+            Expr right = parseFator();
+
+            Expr novaEsquerda = new BinExpr(left, op, right, left.linha, left.coluna);
+            return parseTermoContinua(novaEsquerda);
         } else if (isFollowTermo()) {
-            return;
+            return left;
         }else throw error("Operador inválido no Termo.");
     }
 
-    private void parseFator(){
-        TokenType t = lookahead.type;
+    private Expr parseFator(){
+        int linha = lookahead.line;
+        int coluna = lookahead.col;
 
-        if (t == TokenType.NUMERO || t == TokenType.IDENTIFICADOR || t == TokenType.STRING || t == TokenType.TRUE || t == TokenType.FALSE) {
+        TokenType t = lookahead.type;
+        String lexeme = lookahead.lexeme;
+
+        if (t == TokenType.NUMERO) {
             match(t);
-        }
-        else if (t == TokenType.NEGACAO) {
+            return new NumExpr(lexeme, linha, coluna);
+
+        } else if (t == TokenType.IDENTIFICADOR) {
+            match(t);
+            return new IdExpr(lexeme, linha, coluna);
+
+        } else if (t == TokenType.STRING) {
+            match(t);
+            return new StringExpr(lexeme, linha, coluna);
+
+        } else if (t == TokenType.TRUE || t == TokenType.FALSE) {
+            match(t);
+            return new BoolExpr(lexeme, linha, coluna);
+
+        } else if (t == TokenType.NEGACAO) {
             match(TokenType.NEGACAO);
-            parseFator();
-        }
-        else if (t == TokenType.ABREPAR) {
+            Expr expr = parseFator();
+            return new UnaryExpr("!", expr, linha, coluna);
+
+        } else if (t == TokenType.ABREPAR) {
             match(TokenType.ABREPAR);
-            parseExpressao();
+            Expr expr = parseExpressao();
             match(TokenType.FECHAPAR);
-        }
-        else {
+            return expr;
+
+        } else {
             throw error("Fator inválido. Esperado: Número, Identificador, String, Booleano, '!' ou '('. Encontrado: " + lookahead.lexeme);
         }
     }

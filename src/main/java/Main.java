@@ -1,5 +1,8 @@
+import ast.Program;
 import lexer.Scanner;
 import parser.Parser;
+import visitor.ASTPrinter;
+import visitor.SourcePrinter;
 
 public class Main {
     public static void main(String[] args) {
@@ -35,6 +38,20 @@ public class Main {
 
         Scanner scanner = new Scanner(codigo);
         Parser parser = new Parser(scanner);
-        parser.parse();
+        Program ast = parser.parse();
+
+        if (ast != null) {
+            System.out.println("\n=== Parte 2: IMPRESSÃO DA AST ===");
+            ASTPrinter astPrinter = new ASTPrinter();
+            String estruturaArvore = ast.accept(astPrinter);
+            System.out.println(estruturaArvore);
+
+            System.out.println("\n=== Parte 3: RECONSTRUÇÃO DO CÓDIGO ===");
+            SourcePrinter sourcePrinter = new SourcePrinter();
+            String codigoReimpresso = ast.accept(sourcePrinter);
+            System.out.println(codigoReimpresso);
+        } else {
+            System.out.println("\nA execução dos visitantes foi cancelada devido a erros na análise sintática.");
+        }
     }
 }

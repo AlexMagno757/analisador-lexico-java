@@ -1,0 +1,13 @@
+Program
+  FunDecl(controle)
+    BlockCmd
+      IfCmd
+        BinExpr(>)
+          IdExpr(a)
+          NumExpr(0)
+        BlockCmd
+          AtribCmd(a)
+            NumExpr(1)
+        BlockCmd
+          AtribCmd(a)
+            NumExpr(0)

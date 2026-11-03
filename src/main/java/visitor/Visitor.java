@@ -14,6 +14,8 @@ public interface Visitor<T> {
     T visitVarDecl(VarDecl node);
     T visitParam(Param node);
 
+    T visitVarDeclCmd(VarDeclCmd node);
+
     // Comandos
     T visitBlockCmd(BlockCmd node);
     T visitIfCmd(IfCmd node);

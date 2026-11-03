@@ -151,4 +151,9 @@ public class SourcePrinter implements Visitor<String>{
     public String visitBinExpr(BinExpr node) {
         return "(" + node.left.accept(this) + " " + node.op + " " + node.right.accept(this) + ")";
     }
+
+    @Override
+    public String visitVarDeclCmd(VarDeclCmd node) {
+        return node.decl.accept(this);
+    }
 }

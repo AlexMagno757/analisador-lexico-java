@@ -232,4 +232,9 @@ public class ASTPrinter implements Visitor<String> {
         indent = currentIndent;
         return res;
     }
+
+    @Override
+    public String visitVarDeclCmd(VarDeclCmd node) {
+        return node.decl.accept(this);
+    }
 }

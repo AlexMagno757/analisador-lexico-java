@@ -1,0 +1,9 @@
+Program
+  FunDecl(soma)
+    Param(type="int", id="x")
+    Param(type="int", id="y")
+    BlockCmd
+      ReturnCmd
+        BinExpr(+)
+          IdExpr(x)
+          IdExpr(y)

@@ -1,0 +1,7 @@
+Program
+  VarDecl(type="int", id="a")
+    NumExpr(5)
+  VarDecl(type="double", id="b")
+    NumExpr(3.14)
+  VarDecl(type="bool", id="c")
+    BoolExpr(value="true")

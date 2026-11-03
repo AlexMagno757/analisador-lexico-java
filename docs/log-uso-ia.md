@@ -14,9 +14,18 @@ Durante o desenvolvimento deste analisador léxico, ferramentas de Inteligência
 
 
 
-## Parte 2 - parser.Parser
+## Parte 2 - Parser
 
 **1. Erro de Compilação:** Consulta para verificar um erro de compilação e revisar partes de código já escritas, principalmente no tratamento de erros.
 
 **2. Código para teste:** Gerar códigos simples para se usar como testes.
+
+
+## Parte 3 - AST
+
+**1. Erro de Compilação:** Consulta para verificar um erro de compilação e revisar partes de código já escritas, principalmente na parte de "reescrever" o parser, estava esquecendo algumas instâncias.
+
+**2. Erro de Classe:** Ajuda em uma parte que estava exigindo a criação de uma nova classe para manter orientado a objetos.
+
+**3.Teste de Arquivo:** Ajuda para desvendar motivos pelo qual estava dando erro mesmo o arquivo sendo idêntico a árvore gerada.
 
