@@ -1,3 +1,9 @@
+package parser;
+
+import lexer.Scanner;
+import lexer.Token;
+import lexer.TokenType;
+
 import java.util.Set;
 import java.util.EnumSet;
 
@@ -404,7 +410,4 @@ public class Parser {
         }
     }
 
-    public boolean hasError() {
-        return this.hadError;
-    }
 }

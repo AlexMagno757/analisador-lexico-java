@@ -1,3 +1,6 @@
+import lexer.Scanner;
+import parser.Parser;
+
 public class MainParseTestes {
     public static void main(String[] args) {
         //testesValidos();

@@ -1,3 +1,7 @@
+import lexer.Scanner;
+import lexer.Token;
+import lexer.TokenType;
+
 public class MainTestes {
     public static void main(String[] args) {
         //testarCasosValidos();
@@ -14,7 +18,7 @@ public class MainTestes {
 
         do {
             token = scanner.scanToken();
-            System.out.println("Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
+            System.out.println("lexer.Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
         } while (token.type != TokenType.EOF);
     }
 
@@ -30,7 +34,7 @@ public class MainTestes {
 
         do {
             token = scanner.scanToken();
-            System.out.println("Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
+            System.out.println("lexer.Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
         } while (token.type != TokenType.EOF);
     }
 
@@ -53,7 +57,7 @@ public class MainTestes {
 
         do {
             token = scanner.scanToken();
-            System.out.println("Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
+            System.out.println("lexer.Token lido: " + token.type + " | Lexema: '" + token.lexeme + "'");
         } while (token.type != TokenType.EOF);
 
     }

@@ -4,7 +4,7 @@
 Durante o desenvolvimento deste analisador léxico, ferramentas de Inteligência Artificial foram utilizadas como suporte pontual para as seguintes tarefas:
 
 
-## Parte 1 - Scanner
+## Parte 1 - lexer.Scanner
 
 **1. Sintaxe e Tratamento de Erros:** Consulta para identificar a sintaxe adequada para reportar erros no terminal sem travar a execução do programa.
 
@@ -14,7 +14,7 @@ Durante o desenvolvimento deste analisador léxico, ferramentas de Inteligência
 
 
 
-## Parte 2 - Parser
+## Parte 2 - parser.Parser
 
 **1. Erro de Compilação:** Consulta para verificar um erro de compilação e revisar partes de código já escritas, principalmente no tratamento de erros.
 

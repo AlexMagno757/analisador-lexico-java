@@ -2,10 +2,10 @@
 
 ### Aluno: Alexandre Magno Silva Júnior <br> Matrícula: 12321BCC005
 
-## 1. Categorias de Token
+## 1. Categorias de lexer.Token
 Abaixo encontra-se a tabela de especificação dos tokens:
 
-| Token                  | Notação (regex/EBNF)                                  | Exemplos válidos                | Decisões de Implementação                                                                                                                                                           |
+| lexer.Token                  | Notação (regex/EBNF)                                  | Exemplos válidos                | Decisões de Implementação                                                                                                                                                           |
 |:-----------------------|:------------------------------------------------------|:--------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Identificador**      | `letra (letra \| digito \| "_")*`                     | `idade`, `x1`, `valor_total`    | É case-sensitive. O caractere `_` é permitido. Não existe limite máximo de tamanho explícito.                                                                                       |
 | **Palavra reservada**  | Padrão do identificador + Tabela de Busca (`HashMap`) | `if`, `while`, `int`            | Lista fechada gerida em memória.                                                                                                                                                    |
