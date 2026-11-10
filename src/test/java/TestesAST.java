@@ -11,9 +11,9 @@ import java.io.IOException;
 public class TestesAST {
     public static void main(String[] args) {
         System.out.println("=== TESTES DE ESTRUTURA DA AST (CP3) ===");
-        //testarParentesesRedundantes();
-        //testarPrecedenciaAssociatividade();
-        //testarRoundTrip();
+        testarParentesesRedundantes();
+        testarPrecedenciaAssociatividade();
+        testarRoundTrip();
         testarASTArquivos();
     }
 

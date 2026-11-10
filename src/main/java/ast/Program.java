@@ -10,8 +10,8 @@ public class Program extends ASTNode {
 
     public Program(List<Decl> declarations, int linha, int coluna) {
         this.declarations = declarations;
-        this.linha = linha;   // Herdado de ast.ASTNode
-        this.coluna = coluna; // Herdado de ast.ASTNode
+        this.linha = linha;
+        this.coluna = coluna;
     }
 
     @Override

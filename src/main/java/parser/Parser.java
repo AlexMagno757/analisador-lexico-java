@@ -253,7 +253,7 @@ public class Parser {
         else if (t == TokenType.IDENTIFICADOR) return parseComandoAtribuicao();
         else if (checkTipo()) {
             VarDecl declaracao = parseDeclaracaoVariavel();
-            return new VarDeclCmd(declaracao);
+            return new VarDeclCmd(declaracao,declaracao.linha, declaracao.coluna);
         }
         else {
             throw error("Comando não reconhecido.");
